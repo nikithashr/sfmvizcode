@@ -1,0 +1,4 @@
+/Users/udbhav/Code/sfmvizcode/build/CMU462/src/CMakeFiles/CMU462.dir
+/Users/udbhav/Code/sfmvizcode/build/CMU462/deps/glfw/CMakeFiles/uninstall.dir
+/Users/udbhav/Code/sfmvizcode/build/src/CMakeFiles/viz.dir
+/Users/udbhav/Code/sfmvizcode/build/CMU462/deps/glfw/src/CMakeFiles/glfw.dir

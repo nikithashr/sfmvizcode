@@ -1,0 +1,307 @@
+#include <string>
+#include <iostream>
+
+#include "CMU462/CMU462.h"
+#include "CMU462/vector3D.h"
+#include "CMU462/matrix3x3.h"
+#include "CMU462/viewer.h"
+#include "CMU462/renderer.h"
+#include "CMU462/misc.h"
+
+#include "GL/glew.h"
+
+using namespace std;
+using namespace CMU462;
+
+class VizCamera {
+public:
+
+    VizCamera() {
+        set_parameters(5, PI / 2, PI / 4);
+    }
+
+    void set_projection() {
+        Vector3D obj = pos + dir * r;
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(50.0, 1.0, 0.01f, 100.0f);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        gluLookAt(pos.x, pos.y, pos.z,
+                  obj.x, obj.y, obj.z,
+                  up.x,  up.y,  up.z);
+    }
+
+    void set_parameters(float dist, float cameraPhi, float cameraTheta) {
+        r = dist;
+        phi = cameraPhi;
+        theta = cameraTheta;
+        dir = -Vector3D(cos(phi), -sin(phi), cos(theta)).unit();
+        up = cross(dir,cross(Vector3D(0,0,1),dir)).unit();
+        pos = -dir * r;
+    }
+
+    Vector3D pos;
+    Vector3D dir;
+    Vector3D up;
+    float r;
+    float phi;
+    float theta;
+};
+
+void draw_coordinates() {
+
+    glBegin(GL_LINES);
+
+    // x axis in red
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3i(0,0,0);
+    glVertex3i(1,0,0);
+
+    // y axis in green
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3i(0,0,0);
+    glVertex3i(0,1,0);
+
+    // z axis in blue
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3i(0,0,0);
+    glVertex3i(0,0,1);
+
+    // draw a grid in the x-y plane
+    const int resolution = 10;
+
+    glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+    for (int x = 0; x <= resolution; x++) {
+        glVertex3f(x - resolution/2, -resolution/2, 0);
+        glVertex3f(x - resolution/2, resolution/2, 0);
+    }
+    for (int z = 0; z <= resolution; z++) {
+        glVertex3f(-resolution/2, z - resolution/2, 0);
+        glVertex3f( resolution/2, z - resolution/2, 0);
+    }
+
+    glEnd();
+}
+
+
+
+
+struct Dataset {
+
+    std::vector<Vector3D> keypoints;
+    std::vector<Vector3D> cameraPos;
+    std::vector<Matrix3x3> cameraOrient;
+
+    float randomFloat() {
+        return static_cast<float>(rand()) / RAND_MAX;
+    }
+
+    void load() {
+
+        // Hardcoding 100 random points and 20 camera positions.  This
+        // is probably where you'd load data from your datafiles
+
+        for (int i=0; i<100; i++) {
+            const float scale = 5.f;
+            keypoints.push_back(scale * Vector3D(randomFloat(), randomFloat(), randomFloat()));
+        }
+
+        for (int i=0; i<20; i++) {
+
+            // Hardcoding an example: camera is moving straight
+            // forward 4 meters over the 20 example frames
+            cameraPos.push_back(Vector3D(0.f, .5f * i, 2.f));
+
+            //
+            // m[i] is i'th column of matrix
+            //
+            // Hardcoding an example. This is the cameraToWorld
+            // transform for a camera looking in the (0,1,0) world
+            // direction, with the "camera up" as (0,0,1) in world
+            // space.
+            //
+            Matrix3x3 cameraToWorld;
+            cameraToWorld[0] = Vector3D(1,0,0);   // camera x = camera right
+            cameraToWorld[1] = Vector3D(0,0,1);   // camera y = camera up
+            cameraToWorld[2] = -Vector3D(0,1,0);  // camera -z = camera looking direction
+            cameraOrient.push_back(cameraToWorld);
+        }
+
+    }
+};
+
+class VizApp : public Renderer {
+public:
+
+    VizApp(Dataset* data) {
+        this->data = data;
+    }
+
+    ~VizApp() { }
+
+    string name() {
+        return "VizApp";
+    }
+
+    string info() {
+        return "VizApp";
+    }
+
+    void init() {
+        text_mgr.init(use_hdpi);
+
+        resetCamera();
+
+    }
+
+    void resetView() {
+
+        float phi = PI / 2.f;
+        float theta = PI / 4.f;
+
+
+
+
+    }
+
+    // called on display resize
+    void resize(size_t w, size_t h) {
+        this->w = w;
+        this->h = h;
+        text_mgr.resize(w,h);
+    }
+
+    void cursor_event(float x, float y) {
+
+        // left-click drag rotates
+        if (left_down) {
+            float phi = vizCamera.phi + (x - mouse_x) / w * PI;
+            float theta = vizCamera.theta - (y - mouse_y) / w * PI;
+            vizCamera.set_parameters(vizCamera.r, phi, theta);
+        }
+        mouse_x = x;
+        mouse_y = y;
+        float anchor_x = 2 * (x + 10 - .5 * w) / w;
+        float anchor_y = 2 * (.5 * h - y + 10) / h;
+    }
+
+    // scroll wheel zooms
+    void scroll_event(float offset_x, float offset_y) {
+        float dist = vizCamera.r + (offset_x + offset_y) * vizCamera.r * 0.1;
+        vizCamera.set_parameters(dist, vizCamera.phi, vizCamera.theta);
+    }
+
+    void mouse_event(int key, int event, unsigned char mods) {
+        if (key == MOUSE_LEFT) {
+            if (event == EVENT_PRESS) left_down = true;
+            if (event == EVENT_RELEASE) left_down = false;
+        }
+    }
+
+    // handle key pressed
+    void keyboard_event(int key, int event, unsigned char mods) {
+        string s;
+        switch (event) {
+        case EVENT_PRESS:
+            s = "You just pressed: ";
+            break;
+        case EVENT_RELEASE:
+            s = "You just released: ";
+            break;
+        case EVENT_REPEAT:
+            s = "You are holding: ";
+            break;
+        }
+
+        if (key == KEYBOARD_ENTER) {
+            s += "Enter";
+        } else {
+            char c = key;
+            s += c;
+        }
+    }
+
+    // this is the main method that draws things
+    void render() {
+
+        vizCamera.set_projection();
+        draw_coordinates();
+        text_mgr.render();
+
+        // draw keypoints
+
+        // set color to gray for now
+        glColor4f(0.6f, 0.6f, 0.6f, 1.f);
+        glPointSize(4.f);
+        glBegin(GL_POINTS);
+        for (size_t i=0; i<data->keypoints.size(); i++) {
+            glVertex3f(data->keypoints[i].x, data->keypoints[i].y, data->keypoints[i].z);
+        }
+        glEnd();
+
+
+        // draw camera path as a line
+        glColor3f(1.f, 0.f, 0.f);
+        glBegin(GL_LINE_STRIP);
+        for (size_t i=0; i<data->cameraPos.size(); i++) {
+            glVertex3f(data->cameraPos[i].x, data->cameraPos[i].y, data->cameraPos[i].z);
+        }
+        glEnd();
+
+        // draw point for each camera position
+        glColor3f(1.f, 0.8f, 0.f);
+        glBegin(GL_POINTS);
+        for (size_t i=0; i<data->cameraPos.size(); i++) {
+            glVertex3f(data->cameraPos[i].x, data->cameraPos[i].y, data->cameraPos[i].z);
+        }
+        glEnd();
+    }
+
+
+private:
+
+    // OSD text manager
+    OSDText text_mgr;
+
+    // frame buffer size
+    size_t w, h;
+
+    // key states
+    bool left_down;
+
+    // camera
+    VizCamera vizCamera;
+
+    // mouse location
+    float mouse_x;
+    float mouse_y;
+
+    Dataset* data;
+
+};
+
+
+int main( int argc, char** argv ) {
+
+  Dataset data;
+  data.load();
+
+  // create viewer
+  Viewer viewer = Viewer();
+
+  // defined a user space renderer
+  Renderer* renderer = new VizApp(&data);
+
+  // set user space renderer
+  viewer.set_renderer(renderer);
+
+  // start the viewer
+  viewer.init();
+  viewer.start();
+
+  return 0;
+}
+
+
+
