@@ -25,6 +25,15 @@ struct Utils {
     static const string VERTEX_STR;
     static const string ENDHEADER_STR;
 
+    static Vector3D vector_x_matrix(const Vector3D& v, const Matrix3x3& m) {
+        Vector3D new_vec;
+        for (int i=0; i<3; ++i) {
+            new_vec[i] = dot(v, m.column(i));
+        }
+
+        return new_vec;
+    }
+
     template <typename T>
     static T clamp(const T& n, const T& lower, const T& upper) {
         return std::max(lower, std::min(n, upper));
@@ -44,6 +53,25 @@ struct Utils {
         for (auto i = v.begin(); i != v.end(); ++i) {
             std::cout << *i << std::endl;
         }
+    }
+
+    static void translate_points(vector<Vector3D>& points, Vector3D center) {
+        for (int i = 0; i < points.size(); i++) {
+            points[i] -= center;
+        }
+    }
+
+    static void scale_points(vector<Vector3D>& points, Matrix3x3 scale) {
+        for (int i = 0; i < points.size(); i++) {
+            points[i] = vector_x_matrix(points[i], scale);
+        }
+    }
+
+    static float distance_to_plane(Vector4D& plane, Vector3D& point) {
+        Vector4D h_point = Vector4D(point, 1.f);
+        Vector3D normal = plane.to3D();
+
+        return std::abs(dot(plane, h_point))/normal.norm();
     }
 
     static void display_points_vector(const vector<Vector3D> &v) {
@@ -138,7 +166,8 @@ struct Utils {
     }
 
     /**
-    * Uses 3-point RANSAC, could be made more robust
+    * Uses 3-point RANSAC
+    * TODO: make more robust
     */
     static Vector4D findGroundPlane(vector<Vector3D> &keypoints, 
         int n_iters = 1000, double fraction_inliers = 0.5, double dist_thresh = 0.1) {
@@ -222,6 +251,9 @@ struct Dataset {
             cameraOrient.push_back(cameraToWorld);
         }
 
+        Vector3D center = cameraPos.back();
+        Utils::translate_points(cameraPos, center);
+        Utils::translate_points(keypoints, center);
         return true;
     }
 

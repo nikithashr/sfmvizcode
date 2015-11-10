@@ -377,7 +377,7 @@ public:
         glColor3f(1.f, 1.f, 1.f);
         drawCameraFrustum(data->cameraPos[currentCamera], data->cameraOrient[currentCamera]);
 
-        // draw the estimate ground plane
+        // draw the estimated ground plane
         glColor4f(1.f, 1.f, 0.f, 0.3f);
         if (draw_plane) {
             drawPlane(*ground_plane, min_x, max_x, min_y, max_y);
@@ -426,7 +426,7 @@ int main( int argc, char** argv ) {
 
     // estimate ground plane
     Vector4D ground_plane = Utils::findGroundPlane(data.keypoints);
-
+    
     // create viewer
     Viewer viewer = Viewer();
 
