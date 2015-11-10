@@ -66,12 +66,34 @@ struct Utils {
             points[i] = vector_x_matrix(points[i], scale);
         }
     }
+    
+    static void rotate_points(vector<Vector3D>& points, Matrix3x3 rot) {
+        for (int i = 0; i < points.size(); i++) {
+            points[i] = vector_x_matrix(points[i], rot);
+        }
+    }
 
     static float distance_to_plane(Vector4D& plane, Vector3D& point) {
         Vector4D h_point = Vector4D(point, 1.f);
         Vector3D normal = plane.to3D();
 
         return std::abs(dot(plane, h_point))/normal.norm();
+    }
+
+    static Matrix3x3 compute_rotation_matrix(const Vector3D& a, const Vector3D& b) {
+        Matrix3x3 rot; 
+
+        Vector3D _a = a.unit();
+        Vector3D _b = b.unit();
+        Vector3D v = cross(_a, _b);
+        float s = v.norm();
+        float c = dot(_a, _b);
+        double vData[9] = {0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0}; 
+        Matrix3x3 vMat(vData);
+        
+        rot = Matrix3x3::identity() + vMat + (vMat*vMat)*((1-c)/(s*s));
+
+        return rot;
     }
 
     static void display_points_vector(const vector<Vector3D> &v) {

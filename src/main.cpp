@@ -17,6 +17,7 @@
 
 #define USAGE_ERR 1
 #define DATA_LOAD_ERR 2
+#define HEIGHT 5
 
 using namespace std;
 using namespace CMU462;
@@ -427,6 +428,43 @@ int main( int argc, char** argv ) {
     // estimate ground plane
     Vector4D ground_plane = Utils::findGroundPlane(data.keypoints);
     
+    //compute translation vector
+    Vector3D tVec(ground_plane.w/(3*ground_plane.x), ground_plane.w/(3*ground_plane.y), ground_plane.w/(3*ground_plane.z));
+
+    //translate all the points using tVec
+    Utils::translate_points(data.keypoints, tVec);
+    Utils::translate_points(data.cameraPos, tVec);
+
+    //compute normal direction with respect to first camera
+    Vector3D normalVec = ground_plane.to3D();
+    float sign = dot(normalVec, data.cameraPos.front());
+    if ( sign < 0 ){
+        normalVec = normalVec;
+    }
+   
+    //compute rotation matrix 
+    Matrix3x3 rot = Utils::compute_rotation_matrix(normalVec, Vector3D(0.f, 0.f, 1.f));
+    //rotate camera and 3D points
+    Utils::rotate_points(data.keypoints, rot);
+    Utils::rotate_points(data.cameraPos, rot);
+
+    //rotate ground plane and center it to origin
+    ground_plane = Vector4D(Utils::vector_x_matrix(normalVec, rot), 0.f);
+    std::cout << ground_plane << std::endl;
+
+    //translate all the 3D points and camera points
+    Vector3D firstCamera = data.cameraPos.front();
+    Vector3D offset(firstCamera.x, firstCamera.y, 0);
+    Utils::translate_points(data.keypoints, offset);
+    Utils::translate_points(data.cameraPos, offset);
+
+/*
+    //scale all the 3D points camera points
+    float scale = HEIGHT/Utils::distance_to_plane(ground_plane, firstCamera);
+    Matrix3x3 scaleMat = Matrix3x3::identity()*scale;
+    Utils::scale_points(data.keypoints, scaleMat);
+    Utils::scale_points(data.cameraPos, scaleMat);
+*/
     // create viewer
     Viewer viewer = Viewer();
 
