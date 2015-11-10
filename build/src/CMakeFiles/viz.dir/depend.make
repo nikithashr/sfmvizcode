@@ -16,6 +16,7 @@ src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/misc.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/osdtext.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/renderer.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/vector3D.h
+src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/vector4D.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/CMU462/viewer.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/GL/glew.h
 src/CMakeFiles/viz.dir/main.cpp.o: ../CMU462/include/GLFW/glfw3.h

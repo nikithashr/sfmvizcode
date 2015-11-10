@@ -68,6 +68,16 @@ ostream
 cmath
 -
 
+../CMU462/include/CMU462/vector4D.h
+CMU462.h
+../CMU462/include/CMU462/CMU462.h
+vector3D.h
+../CMU462/include/CMU462/vector3D.h
+ostream
+-
+cmath
+-
+
 ../CMU462/include/CMU462/viewer.h
 renderer.h
 ../CMU462/include/CMU462/renderer.h
@@ -153,6 +163,8 @@ iostream
 -
 fstream
 -
+algorithm
+-
 CMU462/CMU462.h
 /Users/udbhav/Code/sfmvizcode/src/CMU462/CMU462.h
 CMU462/vector3D.h
@@ -181,10 +193,14 @@ fstream
 -
 sstream
 -
+random
+-
 CMU462/CMU462.h
 /Users/udbhav/Code/sfmvizcode/src/CMU462/CMU462.h
 CMU462/vector3D.h
 /Users/udbhav/Code/sfmvizcode/src/CMU462/vector3D.h
+CMU462/vector4D.h
+/Users/udbhav/Code/sfmvizcode/src/CMU462/vector4D.h
 CMU462/matrix3x3.h
 /Users/udbhav/Code/sfmvizcode/src/CMU462/matrix3x3.h
 CMU462/bbox.h

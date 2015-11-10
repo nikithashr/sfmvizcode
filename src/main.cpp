@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 #include "CMU462/CMU462.h"
 #include "CMU462/vector3D.h"
@@ -105,6 +106,31 @@ void draw_coordinates() {
     glEnd();
 }
 
+bool less_by_x(const Vector3D& p1, const Vector3D& p2) {
+    return p1[0] < p2[0];
+}
+
+bool less_by_y(const Vector3D& p1, const Vector3D& p2) {
+    return p1[1] < p2[1];
+}
+
+bool less_by_z(const Vector3D& p1, const Vector3D& p2) {
+    return p1[2] < p2[2];
+}
+
+void drawPlane(const Vector4D& plane, 
+    float min_x, float max_x, float min_y, float max_y) {
+    
+    glBegin(GL_QUADS);
+
+    glVertex3f(min_x, min_y, Utils::solvePlaneForZ(plane, min_x, min_y));
+    glVertex3f(min_x, max_y, Utils::solvePlaneForZ(plane, min_x, max_y));
+    glVertex3f(max_x, max_y, Utils::solvePlaneForZ(plane, max_x, max_y));
+    glVertex3f(max_x, min_y, Utils::solvePlaneForZ(plane, max_x, min_y));
+
+    glEnd();
+}
+
 void drawCameraFrustum(const Vector3D& pos, const Matrix3x3& orient) {
 
     const float dist = 5.f;
@@ -146,10 +172,45 @@ void drawCameraFrustum(const Vector3D& pos, const Matrix3x3& orient) {
 
 
 class VizApp : public Renderer {
+private:
+    Vector4D* ground_plane;
+    bool draw_plane = true;
+
+    float min_x;
+    float max_x;
+    float min_y;
+    float max_y;
+    float min_z;
+    float max_z;
+
 public:
+
+    void calculateKeypointBounds() {
+        auto mmx = std::minmax_element(
+            data->keypoints.begin(), data->keypoints.end(), less_by_x);
+        min_x = (*mmx.first)[0];
+        max_x = (*mmx.second)[0];
+
+        auto mmy = std::minmax_element(
+            data->keypoints.begin(), data->keypoints.end(), less_by_y);
+        min_y = (*mmy.first)[1];
+        max_y = (*mmy.second)[1];
+
+        auto mmz = std::minmax_element(
+            data->keypoints.begin(), data->keypoints.end(), less_by_z);
+        min_z = (*mmz.first)[2];
+        max_z = (*mmz.second)[2];
+    }
 
     VizApp(Dataset* data) {
         this->data = data;
+        calculateKeypointBounds();
+    }
+
+    VizApp(Dataset* data, Vector4D* ground_plane) {
+        this->data = data;
+        this->ground_plane = ground_plane;
+        calculateKeypointBounds();
     }
 
     ~VizApp() { }
@@ -244,6 +305,10 @@ public:
             case 'S':
                 vizCamera.set_parameters(vizCamera.r, 0.f, PI / 2);
                 break;
+            case 'p':
+            case 'P':
+                draw_plane = !draw_plane;
+                break;
             case KEYBOARD_LEFT:
                 if (currentCamera == 0)
                     currentCamera = data->cameraPos.size()-1;
@@ -311,6 +376,12 @@ public:
         // draw orientation of current camera
         glColor3f(1.f, 1.f, 1.f);
         drawCameraFrustum(data->cameraPos[currentCamera], data->cameraOrient[currentCamera]);
+
+        // draw the estimate ground plane
+        glColor4f(1.f, 1.f, 0.f, 0.3f);
+        if (draw_plane) {
+            drawPlane(*ground_plane, min_x, max_x, min_y, max_y);
+        }
     }
 
 
@@ -353,11 +424,14 @@ int main( int argc, char** argv ) {
         return DATA_LOAD_ERR;
     };
 
+    // estimate ground plane
+    Vector4D ground_plane = Utils::findGroundPlane(data.keypoints);
+
     // create viewer
     Viewer viewer = Viewer();
 
     // defined a user space renderer
-    Renderer* renderer = new VizApp(&data);
+    Renderer* renderer = new VizApp(&data, &ground_plane);
 
     // set user space renderer
     viewer.set_renderer(renderer);

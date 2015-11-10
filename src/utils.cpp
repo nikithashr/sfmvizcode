@@ -2,9 +2,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <random>
 
 #include "CMU462/CMU462.h"
 #include "CMU462/vector3D.h"
+#include "CMU462/vector4D.h"
 #include "CMU462/matrix3x3.h"
 #include "CMU462/bbox.h"
 #include "CMU462/viewer.h"
@@ -22,6 +24,27 @@ struct Utils {
     static const string ELEMENT_STR;
     static const string VERTEX_STR;
     static const string ENDHEADER_STR;
+
+    template <typename T>
+    static T clamp(const T& n, const T& lower, const T& upper) {
+        return std::max(lower, std::min(n, upper));
+    }
+
+    static float solvePlaneForZ(Vector4D plane, float x, float y) {
+        float a = plane[0];
+        float b = plane[1];
+        float c = plane[2];
+        float d = plane[3];
+
+        return (-1.f * (a*x + b*y + d)) / c;
+    }
+
+    template <typename T>
+    static void display_vector(const vector<T>& v) {
+        for (auto i = v.begin(); i != v.end(); ++i) {
+            std::cout << *i << std::endl;
+        }
+    }
 
     static void display_points_vector(const vector<Vector3D> &v) {
         for (std::vector<Vector3D>::const_iterator i = v.begin(); i != v.end(); ++i) {
@@ -95,6 +118,65 @@ struct Utils {
         return (points.size() == num_points);
     }
 
+    static vector<Vector3D> sampleWithoutReplacement(vector<Vector3D> v, int n_samples) {
+        std::random_device rd;
+        std::mt19937 randomGenerator(rd());
+
+        int n_elems = v.size() - 1;
+
+        vector<Vector3D> sample;
+
+        for (int i=0; i<n_samples; ++i) {
+            std::uniform_int_distribution<> uniformDistribution(0, n_elems);
+            int index = uniformDistribution(randomGenerator);
+            std::swap(v[index], v[n_elems]);
+            sample.push_back(v[n_elems]);
+            n_elems--;
+        }
+
+        return sample;
+    }
+
+    /**
+    * Uses 3-point RANSAC, could be made more robust
+    */
+    static Vector4D findGroundPlane(vector<Vector3D> &keypoints, 
+        int n_iters = 1000, double fraction_inliers = 0.5, double dist_thresh = 0.1) {
+
+        Vector4D ground_plane;
+
+        std::vector<Vector3D> sample;
+        Vector3D normal;
+
+        for (int i=0; i<n_iters; ++i) {
+            // get 3 random points from the point cloud
+            sample = sampleWithoutReplacement(keypoints, 3);
+
+            // find normal to the plane defined by the 3 sample points
+            normal = cross(sample[2] - sample[0], sample[1] - sample[0]);
+
+            // find the coefficient of the plane eqn
+            double d = dot(normal, sample[0]);
+
+            ground_plane = Vector4D(normal, -1*d);
+
+            int c_inliers = 0;
+            // calculate distance of each point from the ground plane
+            // and count the number that fall within the distance threshold
+            for (int j=0; j<keypoints.size(); ++j) {
+                float dist = dot(ground_plane, keypoints[j]) / normal.norm();
+                if (dist < dist_thresh) { c_inliers++; }
+            }
+
+            // we have met the inlier threshold
+            if (((double)c_inliers / keypoints.size()) > fraction_inliers) {
+                break;
+            }
+        }
+
+        return ground_plane;
+    }
+
 };
 
 const string Utils::PLY_FILETYPE = "ply";
@@ -123,7 +205,6 @@ struct Dataset {
     }
 
     bool load() {
-        std::cout << "what the actual" << std::endl;
         if (pts3DFilename.empty() || cameraPtsFilename.empty()) {
             return loadDefault();
         }
