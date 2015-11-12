@@ -67,6 +67,19 @@ struct Utils {
         }
     }
     
+    static Vector3D point_on_plane(Vector4D plane) {
+        Vector3D randPt(0.f,0.f,0.f);
+
+        if (plane.x != 0)
+            randPt.x = -plane.w/plane.x;
+        else if (plane.y != 0)
+            randPt.y = -plane.w/plane.y;
+        else if (plane.z != 0)
+            randPt.z = -plane.w/plane.z;
+
+        return randPt;
+    }
+
     static void rotate_points(vector<Vector3D>& points, Matrix3x3 rot) {
         for (int i = 0; i < points.size(); i++) {
             points[i] = vector_x_matrix(points[i], rot);
@@ -85,13 +98,16 @@ struct Utils {
 
         Vector3D _a = a.unit();
         Vector3D _b = b.unit();
-        Vector3D v = cross(_a, _b);
-        float s = v.norm();
+        Vector3D rotAxis = cross(_a, _b);
         float c = dot(_a, _b);
-        double vData[9] = {0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0}; 
-        Matrix3x3 vMat(vData);
+        float s = rotAxis.norm();
+        Vector3D k = rotAxis;
+        k = k.unit();
+        double K[9] = {0, -k.z, k.y, k.z, 0, -k.x, -k.y, k.x, 0}; 
+        Matrix3x3 KMat(K);
         
-        rot = Matrix3x3::identity() + vMat + (vMat*vMat)*((1-c)/(s*s));
+        rot = Matrix3x3::identity() + s*KMat + (KMat*KMat)*(1-c);
+        rot = rot.T();
 
         return rot;
     }
@@ -207,7 +223,7 @@ struct Utils {
             normal = cross(sample[2] - sample[0], sample[1] - sample[0]);
 
             // find the coefficient of the plane eqn
-            double d = dot(normal, sample[0]);
+            double d = -dot(normal, sample[0]);
 
             ground_plane = Vector4D(normal, -1*d);
 

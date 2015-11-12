@@ -381,7 +381,8 @@ public:
         // draw the estimated ground plane
         glColor4f(1.f, 1.f, 0.f, 0.3f);
         if (draw_plane) {
-            drawPlane(*ground_plane, min_x, max_x, min_y, max_y);
+            // drawPlane(*ground_plane, min_x, max_x, min_y, max_y);
+            drawPlane(*ground_plane, std::min(-10.f, min_x), std::max(10.f, max_x), std::min(-10.f, min_y), std::max(10.f, max_y));
         }
     }
 
@@ -430,41 +431,50 @@ int main( int argc, char** argv ) {
     
     //compute translation vector
     Vector3D tVec(ground_plane.w/(3*ground_plane.x), ground_plane.w/(3*ground_plane.y), ground_plane.w/(3*ground_plane.z));
+    ground_plane.w = 0;
 
     //translate all the points using tVec
     Utils::translate_points(data.keypoints, tVec);
     Utils::translate_points(data.cameraPos, tVec);
 
     //compute normal direction with respect to first camera
+    Vector3D firstCamera = data.cameraPos.front();
+    Vector3D randPt = Utils::point_on_plane(ground_plane) - tVec;
+    Vector3D camVec = firstCamera - randPt;
     Vector3D normalVec = ground_plane.to3D();
-    float sign = dot(normalVec, data.cameraPos.front());
+    /*
+    float sign = dot(camVec, normalVec);
     if ( sign < 0 ){
-        normalVec = normalVec;
+        normalVec = -normalVec;
+        ground_plane = -ground_plane;
     }
+    */
    
-    //compute rotation matrix 
+    //compute rotation matrix - args: 1st arg aligned with 2nd arg 
     Matrix3x3 rot = Utils::compute_rotation_matrix(normalVec, Vector3D(0.f, 0.f, 1.f));
+
     //rotate camera and 3D points
     Utils::rotate_points(data.keypoints, rot);
     Utils::rotate_points(data.cameraPos, rot);
+    randPt = Utils::vector_x_matrix(randPt, rot);
 
     //rotate ground plane and center it to origin
-    ground_plane = Vector4D(Utils::vector_x_matrix(normalVec, rot), 0.f);
-    std::cout << ground_plane << std::endl;
+    Vector3D rotNormal = Utils::vector_x_matrix(normalVec, rot);
+    ground_plane = Vector4D(rotNormal.unit(), 0.f);
 
-    //translate all the 3D points and camera points
-    Vector3D firstCamera = data.cameraPos.front();
-    Vector3D offset(firstCamera.x, firstCamera.y, 0);
-    Utils::translate_points(data.keypoints, offset);
-    Utils::translate_points(data.cameraPos, offset);
-
-/*
     //scale all the 3D points camera points
-    float scale = HEIGHT/Utils::distance_to_plane(ground_plane, firstCamera);
+    Vector3D modFirstCamera = data.cameraPos.front();
+    float scale = HEIGHT/Utils::distance_to_plane(ground_plane, modFirstCamera);
     Matrix3x3 scaleMat = Matrix3x3::identity()*scale;
     Utils::scale_points(data.keypoints, scaleMat);
     Utils::scale_points(data.cameraPos, scaleMat);
-*/
+
+    //translate all the 3D points and camera points
+    Vector3D rotFirstCamera = data.cameraPos.front();
+    Vector3D offset(rotFirstCamera.x, rotFirstCamera.y, 0.f);
+    Utils::translate_points(data.keypoints, offset);
+    Utils::translate_points(data.cameraPos, offset);
+
     // create viewer
     Viewer viewer = Viewer();
 
