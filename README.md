@@ -8,6 +8,6 @@ In the project root,<br>
 4. make<br>
 
 Run instructions:<br>
-./viz path/to/3D/points.ply path/to/camera/points.ply <br>
+<pre>./viz    path/to/3D/points.ply    path/to/camera/points.ply    path/to/camera/orientation/file</pre><br>
 
 We've included some sample data in PROJECT_ROOT/data
