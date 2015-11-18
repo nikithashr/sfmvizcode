@@ -414,13 +414,13 @@ private:
 
 int main( int argc, char** argv ) {
 
-    if (argc < 3) {
-        printf("Usage: %s <3D points .ply> <camera points .ply>\n", argv[0]);
+    if (argc < 4) {
+        printf("Usage: %s <3D points .ply> <camera points .ply> <camera orient .txt>\n", argv[0]);
         return USAGE_ERR;
     }
 
     // load dataset
-    Dataset data(argv[1], argv[2]);
+    Dataset data(argv[1], argv[2], argv[3]);
     if (!data.load()) {
         printf("Unable to load the point cloud data\n");
         return DATA_LOAD_ERR;

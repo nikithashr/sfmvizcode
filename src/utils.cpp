@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <random>
+#include <assert.h>
 
 #include "CMU462/CMU462.h"
 #include "CMU462/vector3D.h"
@@ -24,6 +25,8 @@ struct Utils {
     static const string ELEMENT_STR;
     static const string VERTEX_STR;
     static const string ENDHEADER_STR;
+    static const char SINGLE_SPACE_CHAR;
+    static const char COMMENT_START_CHAR;
 
     static Vector3D vector_x_matrix(const Vector3D& v, const Matrix3x3& m) {
         Vector3D new_vec;
@@ -134,6 +137,69 @@ struct Utils {
         }
 
         return tokens;
+    }
+
+    static bool loadCameraOrient(std::string filename, vector<Matrix3x3>& cameraRot) {
+        std::ifstream infile(filename);
+
+        int num_points = 0;
+        std::string line;
+
+        bool first = true;
+        bool start_reading_rot = false;
+
+        while (std::getline(infile, line)) {
+            // ignore blank lines
+            if (line.empty()) {
+                continue;
+            }
+
+            // ignore comments
+            if (line.at(0) == COMMENT_START_CHAR) {
+                continue;
+            }
+
+            std::vector<string> split_line = split(line, SINGLE_SPACE_CHAR);
+            // first non-blank, non-comment line is the number of points
+            if (first && split_line.size() == 1) {
+                first = false;
+                num_points = std::stoi(line);
+            }
+
+            // this line has the quaternion data, start reading the rotation
+            // from the next line
+            if (split_line.size() == 4) {
+                start_reading_rot = true;
+                continue;
+            }
+
+            // read the rotation matrix
+            if (start_reading_rot) {
+                start_reading_rot = false;
+                Matrix3x3 rot;
+                float x, y, z;
+
+                std::istringstream iss(line);
+                if (!(iss >> x >> y >> z)) { return false; }
+                rot[0] = Vector3D(x, y, z);
+
+                std::getline(infile, line);
+                iss = std::istringstream(line);
+                if (!(iss >> x >> y >> z)) { return false; }
+                rot[1] = Vector3D(x, y, z);
+
+                std::getline(infile, line);
+                iss = std::istringstream(line);
+                if (!(iss >> x >> y >> z)) { return false; }
+                rot[2] = Vector3D(x, y, z);
+
+                cameraRot.push_back(rot.T());
+            }
+        }
+
+        infile.close();
+
+        return cameraRot.size() == num_points;
     }
 
     static bool loadPLY(std::string filename, std::vector<Vector3D> &points) {
@@ -250,6 +316,8 @@ const string Utils::PLY_FILETYPE = "ply";
 const string Utils::ELEMENT_STR = "element";
 const string Utils::VERTEX_STR = "vertex";
 const string Utils::ENDHEADER_STR = "end_header";
+const char Utils::SINGLE_SPACE_CHAR = ' ';
+const char Utils::COMMENT_START_CHAR = '#';
 
 struct Dataset {
 
@@ -258,6 +326,7 @@ struct Dataset {
     std::vector<Matrix3x3> cameraOrient;
     std::string pts3DFilename;
     std::string cameraPtsFilename;
+    std::string cameraOrientFilename;
 
     float randomFloat() {
         return static_cast<float>(rand()) / RAND_MAX;
@@ -266,32 +335,41 @@ struct Dataset {
     Dataset() {
     }
 
-    Dataset(std::string _pts3DFilename, std::string _cameraPtsFilename) {
+    Dataset(std::string _pts3DFilename, std::string _cameraPtsFilename, std::string _cameraOrientFilename) {
         pts3DFilename = _pts3DFilename;
         cameraPtsFilename = _cameraPtsFilename;
+        cameraOrientFilename = _cameraOrientFilename;
     }
 
     bool load() {
-        if (pts3DFilename.empty() || cameraPtsFilename.empty()) {
+        if (pts3DFilename.empty() || cameraPtsFilename.empty() || cameraOrientFilename.empty()) {
             return loadDefault();
         }
 
+        std::vector<Matrix3x3> cameraRot;
         // load the .ply files
         if (!Utils::loadPLY(cameraPtsFilename, cameraPos)) return false;
         if (!Utils::loadPLY(pts3DFilename, keypoints)) return false;
+        if (!Utils::loadCameraOrient(cameraOrientFilename, cameraRot)) return false;
+        
+        // Make sure that the number of rotation matrices read
+        // is the same as the number of camera positions
+        assert(cameraRot.size() == cameraPos.size());
 
-        // hardcode the camera orientation for now
+        // Init cameraToWorld matrix to point in +y direction
+        Matrix3x3 cameraToWorld;
+        cameraToWorld[0] = Vector3D(1,0,0);   // camera x = camera right
+        cameraToWorld[1] = Vector3D(0,0,1);   // camera y = camera up
+        cameraToWorld[2] = -Vector3D(0,1,0);  // camera -z = camera looking direction
         for (int i=0; i<cameraPos.size(); ++i) {
-            Matrix3x3 cameraToWorld;
-            cameraToWorld[0] = Vector3D(1,0,0);   // camera x = camera right
-            cameraToWorld[1] = Vector3D(0,0,1);   // camera y = camera up
-            cameraToWorld[2] = -Vector3D(0,1,0);  // camera -z = camera looking direction
+            cameraToWorld = cameraToWorld * cameraRot[i];
+            cout << cameraRot[i] << endl;
             cameraOrient.push_back(cameraToWorld);
         }
 
-        Vector3D center = cameraPos.back();
-        Utils::translate_points(cameraPos, center);
-        Utils::translate_points(keypoints, center);
+        // Vector3D center = cameraPos.back();
+        // Utils::translate_points(cameraPos, center);
+        // Utils::translate_points(keypoints, center);
         return true;
     }
 
