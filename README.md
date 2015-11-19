@@ -12,6 +12,6 @@ Run instructions:<br>
 <br>
 Example:<br>
 Inside the build directory,
-<pre>./viz    ../data/options-0000-2.ply    ../data/centers-all-2.ply    ../data/cameras_v2-2.txt</pre><br>
+<pre>./viz    ../data/option-0000-2.ply    ../data/centers-all-2.ply    ../data/cameras_v2-2.txt</pre><br>
 
 We've included some sample data in PROJECT_ROOT/data
