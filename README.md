@@ -8,6 +8,10 @@ In the project root,<br>
 4. make<br>
 
 Run instructions:<br>
-./viz path/to/3D/points.ply path/to/camera/points.ply <br>
+<pre>./viz    path/to/3D/points.ply    path/to/camera/points.ply    path/to/camera/orientation/file</pre><br>
+<br>
+Example:<br>
+Inside the build directory,
+<pre>./viz    ../data/option-0000-2.ply    ../data/centers-all-2.ply    ../data/cameras_v2-2.txt</pre><br>
 
 We've included some sample data in PROJECT_ROOT/data
