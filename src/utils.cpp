@@ -205,13 +205,19 @@ struct Utils {
     static bool loadPLY(std::string filename, std::vector<Vector3D> &points) {
         std::ifstream infile(filename);
 
+        if (infile.fail()) return false;
+
         string metadata;
         int line_num = 0;
         int num_points = 0;
 
+        cout << filename << endl;
+
         // read the metadata
         while (std::getline(infile, metadata)) {
             line_num++;
+
+            cout << line_num << endl;
 
             vector<string> tokens = split(metadata, ' ');
 
@@ -233,6 +239,8 @@ struct Utils {
                 break;
             }
         }
+
+        cout << "read point data" << endl;
 
         // read the point data
         string line;
