@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <unordered_map>
 
 #include "CMU462/CMU462.h"
 #include "CMU462/vector3D.h"

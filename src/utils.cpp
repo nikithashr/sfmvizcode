@@ -4,6 +4,7 @@
 #include <sstream>
 #include <random>
 #include <assert.h>
+#include <unordered_map>
 
 #include "CMU462/CMU462.h"
 #include "CMU462/vector3D.h"
@@ -55,6 +56,13 @@ struct Utils {
     static void display_vector(const vector<T>& v) {
         for (auto i = v.begin(); i != v.end(); ++i) {
             std::cout << *i << std::endl;
+        }
+    }
+
+    template <typename K, typename V>
+    static void display_unordered_map(const std::unordered_map<K, V>& m) {
+        for (auto i = m.begin(); i != m.end(); ++i) {
+            cout << i->first << ": " << i->second << endl;
         }
     }
 
@@ -139,7 +147,7 @@ struct Utils {
         return tokens;
     }
 
-    static bool loadCameraOrient(std::string filename, vector<Matrix3x3>& cameraRot) {
+    static bool loadCameraOrient(std::string filename, vector<Matrix3x3>& cameraRot, std::unordered_map<std::string, Matrix3x3>& frameToCameraOrientMap) {
         std::ifstream infile(filename);
 
         int num_points = 0;
@@ -147,11 +155,30 @@ struct Utils {
 
         bool first = true;
         bool start_reading_rot = false;
+        bool skip_filename = false;
+        bool read_filename = true;
+        std::string orig_filename;
 
         while (std::getline(infile, line)) {
             // ignore blank lines
             if (line.empty()) {
+                if (first) {
+                    continue;
+                } else {
+                    skip_filename = true;
+                    continue;
+                }
+            }
+
+            if (skip_filename) {
+                skip_filename = false;
+                read_filename = true;
                 continue;
+            }
+
+            if (read_filename) {
+                read_filename = false;
+                orig_filename = std::string(line);
             }
 
             // ignore comments
@@ -194,6 +221,7 @@ struct Utils {
                 rot[2] = Vector3D(x, y, z);
 
                 cameraRot.push_back(rot.T());
+                frameToCameraOrientMap[orig_filename] = rot.T();
             }
         }
 
@@ -332,6 +360,7 @@ struct Dataset {
     std::vector<Vector3D> keypoints;
     std::vector<Vector3D> cameraPos;
     std::vector<Matrix3x3> cameraOrient;
+    std::unordered_map<std::string, Matrix3x3> frameToCameraOrientMap;
     std::string pts3DFilename;
     std::string cameraPtsFilename;
     std::string cameraOrientFilename;
@@ -358,7 +387,9 @@ struct Dataset {
         // load the .ply files
         if (!Utils::loadPLY(cameraPtsFilename, cameraPos)) return false;
         if (!Utils::loadPLY(pts3DFilename, keypoints)) return false;
-        if (!Utils::loadCameraOrient(cameraOrientFilename, cameraRot)) return false;
+        if (!Utils::loadCameraOrient(cameraOrientFilename, cameraRot, frameToCameraOrientMap)) return false;
+
+        Utils::display_unordered_map(frameToCameraOrientMap);
         
         // Make sure that the number of rotation matrices read
         // is the same as the number of camera positions
