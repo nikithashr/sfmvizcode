@@ -401,7 +401,7 @@ struct Dataset {
         cameraToWorld[1] = Vector3D(0,0,1);   // camera y = camera up
         cameraToWorld[2] = -Vector3D(0,1,0);  // camera -z = camera looking direction
         for (int i=0; i<cameraPos.size(); ++i) {
-            cameraToWorld = cameraToWorld * cameraRot[i];
+            // cameraToWorld = cameraToWorld * cameraRot[i];
             cout << cameraRot[i] << endl;
             cameraOrient.push_back(cameraToWorld);
         }
